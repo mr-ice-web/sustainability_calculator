@@ -1,0 +1,90 @@
+Act as a full-stack web developer and UX designer with sustainability knowledge.
+
+
+I want you to build a responsive, visually appealing, and accurate carbon emissions calculator for digital marketing campaigns.
+
+
+The tool will estimate the CO₂e emissions of a campaign based on inputs like impressions, platform, AI-generated assets, storage, and budget.
+
+
+It should also output emissions per dollar and per impression.
+
+🧩 Calculator Requirements
+
+📥 Inputs:
+
+Number of impressions
+
+Platform (dropdown: Google, Meta, TikTok, YouTube, Programmatic)
+
+Number of AI-generated images
+
+Number of AI-generated text queries
+
+Cloud storage (GB/month)
+
+Total campaign spend ($)
+
+⚙️ Emission Factors (apply by default):
+
+Google: 3g CO₂e per impression
+
+YouTube: 50g CO₂e per impression
+
+Meta: 20g CO₂e per impression
+
+TikTok: 60g CO₂e per impression
+
+Programmatic: 36g CO₂e per impression (30g + 20% overhead)
+
+AI-generated image: 2g CO₂e
+
+AI-generated text: 1g CO₂e
+
+Cloud storage: 0.02 kg CO₂e per GB/month
+
+📤 Outputs:
+
+Total emissions (kg CO₂e)
+
+Emissions per $ spent (kg CO₂e/$)
+
+Emissions per impression (g CO₂e)
+
+Optional: equivalence (e.g., “equal to X km driven”)
+
+🎨 Design Instructions
+
+Use modern responsive design (Tailwind CSS or equivalent).
+
+Layout should be clean, white space balanced, and mobile-friendly.
+
+Use friendly language and labels, not tech jargon.
+
+Include a “Calculate” button and results section with clear typography and some color to make results stand out.
+
+(Optional: add dark mode toggle.)
+
+🚀 Bonus Features (if time allows)
+
+Add tooltips or “info” icons next to inputs to explain assumptions.
+
+Add ability to export results as PDF.
+
+Add visual feedback (like icons or color scale) based on emissions intensity (green = low, red = high).
+
+Consider performance (use minimal JS) and accessibility (WCAG AA).
+
+🧾 Final Deliverable
+
+Output one clean HTML+CSS+JS file that I can open in a browser. It should run standalone (no build steps).
+
+
+Code must be production-ready and annotated for easy edits later.
+
+
+Focus on usability, speed, and clarity.
+
+
+
+Analyze the developer notes, values, and formulas in the PDF file uploaded and take it into consideration when designing the logic of the calculator. 
