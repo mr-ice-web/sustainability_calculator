@@ -56,10 +56,17 @@ interface BreakdownItem {
   color: string;
 }
 
-interface CalculationInputs {
-  impressions: number;
+interface PlatformData {
   platform: string;
+  impressions: number;
   budget: number;
+}
+
+interface DistributionInputs {
+  platforms: PlatformData[];
+}
+
+interface AssetCreationInputs {
   aiImages: number;
   aiQueries: number;
   avgTokens: number;
@@ -71,12 +78,34 @@ interface CalculationInputs {
   greenCloud: boolean;
 }
 
+interface CalculationResults {
+  totalEmissionsKg: number;
+  emissionsPerDollar: number;
+  emissionsPerImpression: number;
+  kmDriven: number;
+  emissionLevel: 'low' | 'medium' | 'high' | 'very-high';
+  breakdown: BreakdownItem[];
+}
+
 export default function CarbonCalculator() {
   const [darkMode, setDarkMode] = useState(false);
-  const [inputs, setInputs] = useState<CalculationInputs>({
-    impressions: 0,
-    platform: '',
-    budget: 0,
+  
+  // Distribution inputs and results
+  const [distributionInputs, setDistributionInputs] = useState<DistributionInputs>({
+    platforms: [{ platform: '', impressions: 0, budget: 0 }]
+  });
+  
+  const [distributionResults, setDistributionResults] = useState<CalculationResults>({
+    totalEmissionsKg: 0,
+    emissionsPerDollar: 0,
+    emissionsPerImpression: 0,
+    kmDriven: 0,
+    emissionLevel: 'low' as 'low' | 'medium' | 'high' | 'very-high',
+    breakdown: [] as BreakdownItem[]
+  });
+
+  // Asset creation inputs and results
+  const [assetInputs, setAssetInputs] = useState<AssetCreationInputs>({
     aiImages: 0,
     aiQueries: 0,
     avgTokens: 300,
@@ -88,7 +117,7 @@ export default function CarbonCalculator() {
     greenCloud: false
   });
 
-  const [results, setResults] = useState({
+  const [assetResults, setAssetResults] = useState<CalculationResults>({
     totalEmissionsKg: 0,
     emissionsPerDollar: 0,
     emissionsPerImpression: 0,
@@ -97,7 +126,8 @@ export default function CarbonCalculator() {
     breakdown: [] as BreakdownItem[]
   });
 
-  const [showResults, setShowResults] = useState(false);
+  const [showDistributionResults, setShowDistributionResults] = useState(false);
+  const [showAssetResults, setShowAssetResults] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
 
   // Toggle dark mode
@@ -110,92 +140,35 @@ export default function CarbonCalculator() {
     }
   };
 
-  // Calculate emissions based on inputs
-  const calculateEmissions = () => {
+  // Calculate distribution emissions
+  const calculateDistributionEmissions = () => {
     let totalEmissionsG = 0;
+    let totalImpressions = 0;
+    let totalBudget = 0;
     const breakdown: BreakdownItem[] = [];
 
-    // Platform emissions
-    if (inputs.impressions > 0 && inputs.platform && EMISSION_FACTORS.platforms[inputs.platform as keyof typeof EMISSION_FACTORS.platforms]) {
-      const platformEmissions = inputs.impressions * EMISSION_FACTORS.platforms[inputs.platform as keyof typeof EMISSION_FACTORS.platforms];
-      totalEmissionsG += platformEmissions;
-      const platformDisplayName = inputs.platform === 'google-display' ? 'Google Display' : 
-                                 inputs.platform.charAt(0).toUpperCase() + inputs.platform.slice(1);
-      breakdown.push({
-        category: 'Campaign Distribution',
-        description: `${inputs.impressions.toLocaleString()} impressions on ${platformDisplayName}`,
-        emissions: platformEmissions,
-        color: 'blue'
-      });
-    }
-
-    // AI Images
-    if (inputs.aiImages > 0) {
-      const imageEmissions = inputs.aiImages * EMISSION_FACTORS.aiImage;
-      totalEmissionsG += imageEmissions;
-      breakdown.push({
-        category: 'AI Images',
-        description: `${inputs.aiImages} AI-generated images`,
-        emissions: imageEmissions,
-        color: 'purple'
-      });
-    }
-
-    // AI Text
-    if (inputs.aiQueries > 0) {
-      const textEmissions = inputs.aiQueries * (inputs.avgTokens / 300) * EMISSION_FACTORS.aiTextPer300Tokens;
-      totalEmissionsG += textEmissions;
-      breakdown.push({
-        category: 'AI Text',
-        description: `${inputs.aiQueries} queries (avg ${inputs.avgTokens} tokens)`,
-        emissions: textEmissions,
-        color: 'indigo'
-      });
-    }
-
-    // AI Video
-    if (inputs.videoSeconds > 0) {
-      const videoEmissions = (inputs.videoSeconds / 2) * EMISSION_FACTORS.aiVideoPer2Seconds;
-      totalEmissionsG += videoEmissions;
-      breakdown.push({
-        category: 'AI Video',
-        description: `${inputs.videoSeconds} seconds of AI video`,
-        emissions: videoEmissions,
-        color: 'pink'
-      });
-    }
-
-    // Hardware
-    if (inputs.laptops > 0) {
-      const hardwareEmissions = inputs.laptops * 1 * (inputs.usageShare / 100) * EMISSION_FACTORS.laptopPerMonth;
-      totalEmissionsG += hardwareEmissions;
-      breakdown.push({
-        category: 'Hardware',
-        description: `${inputs.laptops} laptop(s) at ${inputs.usageShare}% usage`,
-        emissions: hardwareEmissions,
-        color: 'gray'
-      });
-    }
-
-    // Cloud Storage
-    if (inputs.storage > 0) {
-      let storageEmissions = inputs.storage * inputs.storageMonths * EMISSION_FACTORS.storagePerGBMonth;
-      if (inputs.greenCloud) {
-        storageEmissions *= (1 - EMISSION_FACTORS.greenCloudReduction);
+    distributionInputs.platforms.forEach((platformData, index) => {
+      if (platformData.impressions > 0 && platformData.platform && EMISSION_FACTORS.platforms[platformData.platform as keyof typeof EMISSION_FACTORS.platforms]) {
+        const platformEmissions = platformData.impressions * EMISSION_FACTORS.platforms[platformData.platform as keyof typeof EMISSION_FACTORS.platforms];
+        totalEmissionsG += platformEmissions;
+        totalImpressions += platformData.impressions;
+        totalBudget += platformData.budget;
+        
+        const platformDisplayName = platformData.platform === 'google-display' ? 'Google Display' : 
+                                   platformData.platform.charAt(0).toUpperCase() + platformData.platform.slice(1);
+        breakdown.push({
+          category: platformDisplayName,
+          description: `${platformData.impressions.toLocaleString()} impressions${platformData.budget > 0 ? ` ($${platformData.budget.toLocaleString()})` : ''}`,
+          emissions: platformEmissions,
+          color: 'blue'
+        });
       }
-      totalEmissionsG += storageEmissions;
-      breakdown.push({
-        category: 'Cloud Storage',
-        description: `${inputs.storage} GB for ${inputs.storageMonths} month(s)${inputs.greenCloud ? ' (green energy)' : ''}`,
-        emissions: storageEmissions,
-        color: 'green'
-      });
-    }
+    });
 
     // Convert to kg and calculate metrics
     const totalEmissionsKg = totalEmissionsG / 1000;
-    const emissionsPerDollar = inputs.budget > 0 ? totalEmissionsG / inputs.budget : 0;
-    const emissionsPerImpression = inputs.impressions > 0 ? totalEmissionsG / inputs.impressions : 0;
+    const emissionsPerDollar = totalBudget > 0 ? totalEmissionsG / totalBudget : 0;
+    const emissionsPerImpression = totalImpressions > 0 ? totalEmissionsG / totalImpressions : 0;
     
     // Calculate km driven equivalent (average car emits ~0.184 kg CO2 per km)
     const kmDriven = totalEmissionsKg / 0.184;
@@ -212,7 +185,7 @@ export default function CarbonCalculator() {
       emissionLevel = 'very-high';
     }
 
-    setResults({
+    setDistributionResults({
       totalEmissionsKg,
       emissionsPerDollar,
       emissionsPerImpression,
@@ -221,31 +194,142 @@ export default function CarbonCalculator() {
       breakdown
     });
 
-    setShowResults(true);
+    setShowDistributionResults(true);
   };
 
-  // Auto-calculate when inputs change (debounced)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      calculateEmissions();
-    }, 500);
+  // Calculate asset creation emissions
+  const calculateAssetEmissions = () => {
+    let totalEmissionsG = 0;
+    const breakdown: BreakdownItem[] = [];
 
-    return () => clearTimeout(timer);
-  }, [inputs]);
+    // AI Images
+    if (assetInputs.aiImages > 0) {
+      const imageEmissions = assetInputs.aiImages * EMISSION_FACTORS.aiImage;
+      totalEmissionsG += imageEmissions;
+      breakdown.push({
+        category: 'AI Images',
+        description: `${assetInputs.aiImages} AI-generated images`,
+        emissions: imageEmissions,
+        color: 'purple'
+      });
+    }
 
-  const updateInput = (key: keyof CalculationInputs, value: any) => {
-    setInputs(prev => ({ ...prev, [key]: value }));
+    // AI Text
+    if (assetInputs.aiQueries > 0) {
+      const textEmissions = assetInputs.aiQueries * (assetInputs.avgTokens / 300) * EMISSION_FACTORS.aiTextPer300Tokens;
+      totalEmissionsG += textEmissions;
+      breakdown.push({
+        category: 'AI Text',
+        description: `${assetInputs.aiQueries} queries (avg ${assetInputs.avgTokens} tokens)`,
+        emissions: textEmissions,
+        color: 'indigo'
+      });
+    }
+
+    // AI Video
+    if (assetInputs.videoSeconds > 0) {
+      const videoEmissions = (assetInputs.videoSeconds / 2) * EMISSION_FACTORS.aiVideoPer2Seconds;
+      totalEmissionsG += videoEmissions;
+      breakdown.push({
+        category: 'AI Video',
+        description: `${assetInputs.videoSeconds} seconds of AI video`,
+        emissions: videoEmissions,
+        color: 'pink'
+      });
+    }
+
+    // Hardware
+    if (assetInputs.laptops > 0) {
+      const hardwareEmissions = assetInputs.laptops * 1 * (assetInputs.usageShare / 100) * EMISSION_FACTORS.laptopPerMonth;
+      totalEmissionsG += hardwareEmissions;
+      breakdown.push({
+        category: 'Hardware',
+        description: `${assetInputs.laptops} laptop(s) at ${assetInputs.usageShare}% usage`,
+        emissions: hardwareEmissions,
+        color: 'gray'
+      });
+    }
+
+    // Cloud Storage
+    if (assetInputs.storage > 0) {
+      let storageEmissions = assetInputs.storage * assetInputs.storageMonths * EMISSION_FACTORS.storagePerGBMonth;
+      if (assetInputs.greenCloud) {
+        storageEmissions *= (1 - EMISSION_FACTORS.greenCloudReduction);
+      }
+      totalEmissionsG += storageEmissions;
+      breakdown.push({
+        category: 'Cloud Storage',
+        description: `${assetInputs.storage} GB for ${assetInputs.storageMonths} month(s)${assetInputs.greenCloud ? ' (green energy)' : ''}`,
+        emissions: storageEmissions,
+        color: 'green'
+      });
+    }
+
+    // Convert to kg and calculate metrics
+    const totalEmissionsKg = totalEmissionsG / 1000;
+    const emissionsPerDollar = 0; // No budget for asset creation
+    const emissionsPerImpression = 0; // No impressions for asset creation
+    
+    // Calculate km driven equivalent (average car emits ~0.184 kg CO2 per km)
+    const kmDriven = totalEmissionsKg / 0.184;
+
+    // Determine emission level based on updated thresholds
+    let emissionLevel: 'low' | 'medium' | 'high' | 'very-high';
+    if (totalEmissionsKg < 100) {
+      emissionLevel = 'low';
+    } else if (totalEmissionsKg < 500) {
+      emissionLevel = 'medium';
+    } else if (totalEmissionsKg < 2000) {
+      emissionLevel = 'high';
+    } else {
+      emissionLevel = 'very-high';
+    }
+
+    setAssetResults({
+      totalEmissionsKg,
+      emissionsPerDollar,
+      emissionsPerImpression,
+      kmDriven,
+      emissionLevel,
+      breakdown
+    });
+
+    setShowAssetResults(true);
   };
 
-  const exportResults = () => {
-    // Create a simple text export for now
+  // Helper functions for updating inputs
+  const addPlatform = () => {
+    setDistributionInputs(prev => ({
+      platforms: [...prev.platforms, { platform: '', impressions: 0, budget: 0 }]
+    }));
+  };
+
+  const removePlatform = (index: number) => {
+    setDistributionInputs(prev => ({
+      platforms: prev.platforms.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updatePlatformData = (index: number, field: keyof PlatformData, value: any) => {
+    setDistributionInputs(prev => ({
+      platforms: prev.platforms.map((platform, i) => 
+        i === index ? { ...platform, [field]: value } : platform
+      )
+    }));
+  };
+
+  const updateAssetInput = (field: keyof AssetCreationInputs, value: any) => {
+    setAssetInputs(prev => ({ ...prev, [field]: value }));
+  };
+
+  const exportResults = (results: CalculationResults, type: 'distribution' | 'asset') => {
     const exportData = `
-Digital Marketing Carbon Calculator Results
+Digital Marketing Carbon Calculator Results - ${type === 'distribution' ? 'Campaign Distribution' : 'Asset Creation'}
 ==========================================
 
 Total Emissions: ${results.totalEmissionsKg.toFixed(2)} kg CO₂e
-Emissions per Dollar: ${results.emissionsPerDollar.toFixed(2)} g/$
-Emissions per Impression: ${results.emissionsPerImpression.toFixed(2)} g
+${type === 'distribution' ? `Emissions per Dollar: ${results.emissionsPerDollar.toFixed(2)} g/$` : ''}
+${type === 'distribution' ? `Emissions per Impression: ${results.emissionsPerImpression.toFixed(2)} g` : ''}
 Equivalent to: ${results.kmDriven.toFixed(1)} km driven
 
 Breakdown:
@@ -264,14 +348,14 @@ Calculation Assumptions:
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'carbon-calculator-results.txt';
+    a.download = `carbon-calculator-${type}-results.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  const getEmissionLevelText = () => {
+  const getEmissionLevelText = (results: CalculationResults) => {
     switch (results.emissionLevel) {
       case 'low': return 'Low Emissions';
       case 'medium': return 'Moderate Emissions';
@@ -281,7 +365,7 @@ Calculation Assumptions:
     }
   };
 
-  const getEmissionLevelClass = () => {
+  const getEmissionLevelClass = (results: CalculationResults) => {
     switch (results.emissionLevel) {
       case 'low': return 'emission-level-low';
       case 'medium': return 'emission-level-medium';
