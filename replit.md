@@ -115,3 +115,11 @@ Changelog:
   - Added 5 new platforms (Bing, Pinterest, Reddit, LinkedIn, separate Google Display)
   - Consolidated 40+ academic and industry sources in methodology section
   - Updated calculations reflect more accurate, research-based emission factors
+- July 14, 2025. Major architectural refactor based on client feedback:
+  - Separated calculation modules: Distribution and Asset Creation now operate independently
+  - Added multi-platform support: Users can calculate emissions for multiple platforms simultaneously
+  - Redesigned emission indicators as non-interactive labels (not button-like)
+  - Fixed tooltip functionality for information icons
+  - Improved UX with separate calculate buttons for each module
+  - Enhanced results display with platform-wise breakdowns
+  - Added comprehensive sources and methodology section
